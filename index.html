@@ -38,6 +38,7 @@
   select option { background: #1a1a1a; }
   .btn-register { background: transparent; border: 1px solid #e91e8c; color: #e91e8c; font-family: 'Share Tech Mono', monospace; font-size: 12px; letter-spacing: 2px; padding: 9px 20px; cursor: pointer; white-space: nowrap; transition: background 0.2s, color 0.2s; }
   .btn-register:hover { background: #e91e8c; color: #0a0a0a; }
+  .btn-register:disabled { opacity: 0.5; cursor: not-allowed; }
   .table-section { background: #0f0f0f; border: 1px solid #1e1e1e; }
   table { width: 100%; border-collapse: collapse; }
   thead th { font-size: 10px; color: #444; letter-spacing: 2px; text-transform: uppercase; padding: 12px 14px; text-align: left; border-bottom: 1px solid #1e1e1e; }
@@ -54,14 +55,14 @@
   .amount { color: #c9a84c; }
   .delete-btn { background: none; border: none; color: #333; cursor: pointer; font-size: 16px; padding: 2px 6px; transition: color 0.2s; }
   .delete-btn:hover { color: #e74c3c; }
-  .bottom-bar { margin-top: 1px; background: #0f0f0f; border: 1px solid #1e1e1e; border-top: none; padding: 14px 16px; display: flex; align-items: center; gap: 24px; }
+  .bottom-bar { margin-top: 1px; background: #0f0f0f; border: 1px solid #1e1e1e; border-top: none; padding: 14px 16px; display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
   .commission-label { font-size: 10px; color: #444; letter-spacing: 2px; text-transform: uppercase; }
   .commission-value { font-family: 'Orbitron', monospace; font-size: 16px; color: #c9a84c; }
   .revenue-label { font-size: 10px; color: #444; letter-spacing: 2px; text-transform: uppercase; }
   .revenue-value { font-family: 'Orbitron', monospace; font-size: 16px; color: #2ecc71; }
   .sync-msg { font-size: 10px; letter-spacing: 1px; margin-left: auto; display: none; }
-  .sync-ok { color: #2ecc71; }
-  .sync-err { color: #e74c3c; }
+  .sync-ok { color: #2ecc71; display: block !important; }
+  .sync-err { color: #e74c3c; display: block !important; }
   .empty-row td { text-align: center; color: #333; padding: 30px; letter-spacing: 2px; }
   .loading-row td { text-align: center; color: #555; padding: 30px; letter-spacing: 2px; animation: blink 1.2s infinite; }
   @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
@@ -70,7 +71,7 @@
 <body>
 
 <div class="header">
-  <div class="header-sub">Francisco Marquez — Club de la Elegancia</div>
+  <div class="header-sub">Francisco Guzmán — Club de la Elegancia</div>
   <div class="header-title">Sales Tracker</div>
   <div class="header-date">Lanzamiento · <span id="today-date"></span></div>
   <div class="status-label"><span class="status-dot"></span><span id="status-txt">CONECTANDO...</span></div>
@@ -176,29 +177,36 @@ let ventas = [];
 
 document.getElementById('today-date').textContent = new Date().toLocaleDateString('es-ES', {day:'2-digit', month:'short', year:'numeric'}).toUpperCase();
 
-function cargarDatos() {
-  const cb = 'cb_' + Date.now();
+// JSONP universal — funciona para GET y para POST simulado via GET con params
+function jsonp(params, callback) {
+  const cb = 'cb_' + Date.now() + '_' + Math.random().toString(36).slice(2);
   window[cb] = function(res) {
     delete window[cb];
-    document.getElementById('status-txt').textContent = 'EN VIVO';
-    if (res.ok && res.data) {
-      ventas = res.data;
-      renderTabla();
-    } else {
-      renderTabla();
-    }
+    document.body.removeChild(script);
+    callback(res);
   };
+  const qs = Object.entries(params).map(([k,v]) => k + '=' + encodeURIComponent(typeof v === 'object' ? JSON.stringify(v) : v)).join('&');
   const script = document.createElement('script');
-  script.src = SHEET_URL + '?callback=' + cb;
+  script.src = SHEET_URL + '?' + qs + '&callback=' + cb;
   script.onerror = function() {
-    document.getElementById('status-txt').textContent = 'SIN CONEXIÓN';
-    ventas = [];
-    renderTabla();
+    delete window[cb];
+    document.body.removeChild(script);
+    callback({ok: false, error: 'Network error'});
   };
   document.body.appendChild(script);
 }
 
-async function registrar() {
+function cargarDatos() {
+  jsonp({action: 'get'}, function(res) {
+    document.getElementById('status-txt').textContent = 'EN VIVO';
+    if (res.ok && res.data) {
+      ventas = res.data;
+    }
+    renderTabla();
+  });
+}
+
+function registrar() {
   const nombre = document.getElementById('f-nombre').value.trim();
   const tipo = document.getElementById('f-tipo').value;
   if (!nombre || !tipo) { showSync('Nombre y Tipo son obligatorios.', false); return; }
@@ -220,30 +228,31 @@ async function registrar() {
     sesion: document.getElementById('f-sesion').value
   };
 
-  try {
-    await fetch(SHEET_URL, { method: 'POST', body: JSON.stringify(venta) });
-    ventas.push(venta);
-    renderTabla();
-    resetForm();
-    showSync('Guardado en Google Sheets', true);
-  } catch(err) {
-    showSync('Error al guardar. Intenta de nuevo.', false);
-  }
-
-  btn.textContent = '[ + REGISTRAR ]';
-  btn.disabled = false;
+  jsonp(venta, function(res) {
+    if (res.ok) {
+      ventas.push(venta);
+      renderTabla();
+      resetForm();
+      showSync('Guardado en Google Sheets', true);
+    } else {
+      showSync('Error al guardar: ' + (res.error || ''), false);
+    }
+    btn.textContent = '[ + REGISTRAR ]';
+    btn.disabled = false;
+  });
 }
 
-async function eliminar(id) {
+function eliminar(id) {
   if (!confirm('¿Eliminar este registro?')) return;
-  try {
-    await fetch(SHEET_URL, { method: 'POST', body: JSON.stringify({ action: 'delete', id: String(id) }) });
-    ventas = ventas.filter(v => String(v.id) !== String(id));
-    renderTabla();
-    showSync('Registro eliminado', true);
-  } catch(err) {
-    showSync('Error al eliminar.', false);
-  }
+  jsonp({action: 'delete', id: String(id)}, function(res) {
+    if (res.ok) {
+      ventas = ventas.filter(v => String(v.id) !== String(id));
+      renderTabla();
+      showSync('Registro eliminado', true);
+    } else {
+      showSync('Error al eliminar.', false);
+    }
+  });
 }
 
 function renderTabla() {
@@ -290,8 +299,7 @@ function showSync(msg, ok) {
   const el = document.getElementById('sync-msg');
   el.textContent = msg;
   el.className = 'sync-msg ' + (ok ? 'sync-ok' : 'sync-err');
-  el.style.display = 'block';
-  setTimeout(() => el.style.display = 'none', 3000);
+  setTimeout(() => { el.className = 'sync-msg'; }, 3500);
 }
 
 cargarDatos();
