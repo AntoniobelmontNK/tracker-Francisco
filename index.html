@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sales Tracker — Club de la Elegancia</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0a0a0a; color: #e0e0d0; font-family: 'Share Tech Mono', monospace; font-size: 13px; padding: 24px; min-height: 100vh; }
+  .header { margin-bottom: 28px; position: relative; }
+  .header-sub { font-size: 11px; color: #555; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 4px; }
+  .header-title { font-family: 'Orbitron', monospace; font-size: 28px; font-weight: 700; color: #c9a84c; letter-spacing: 3px; text-transform: uppercase; line-height: 1; }
+  .header-date { font-size: 11px; color: #444; letter-spacing: 2px; margin-top: 4px; }
+  .status-label { position: absolute; top: 0; right: 0; font-size: 11px; color: #2ecc71; letter-spacing: 2px; display: flex; align-items: center; gap: 6px; }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #2ecc71; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+  .metric-card { background: #111; border: 1px solid #222; border-top: 2px solid #c9a84c; padding: 16px; }
+  .metric-card.low { border-top-color: #2ecc71; }
+  .metric-card.high { border-top-color: #e74c3c; }
+  .metric-card.sched { border-top-color: #e91e8c; }
+  .metric-label { font-size: 10px; color: #555; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px; }
+  .metric-value { font-family: 'Orbitron', monospace; font-size: 32px; font-weight: 700; color: #e0e0d0; line-height: 1; }
+  .metric-card.low .metric-value { color: #2ecc71; }
+  .metric-card.high .metric-value { color: #e74c3c; }
+  .metric-card.sched .metric-value { color: #e91e8c; }
+  .form-section { background: #0f0f0f; border: 1px solid #1e1e1e; border-left: 3px solid #e91e8c; padding: 20px; margin-bottom: 24px; }
+  .form-title { font-size: 11px; color: #e91e8c; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 16px; }
+  .form-row { display: grid; grid-template-columns: 1.5fr 1fr 1.2fr 1fr 0.8fr 1fr; gap: 10px; margin-bottom: 10px; align-items: end; }
+  .form-row-2 { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: end; }
+  .field-group { display: flex; flex-direction: column; gap: 5px; }
+  .field-label { font-size: 10px; color: #444; letter-spacing: 1px; text-transform: uppercase; }
+  .field-label span { color: #e91e8c; }
+  input, select { background: #1a1a1a; border: 1px solid #2a2a2a; color: #e0e0d0; font-family: 'Share Tech Mono', monospace; font-size: 12px; padding: 8px 10px; width: 100%; outline: none; transition: border-color 0.2s; }
+  input:focus, select:focus { border-color: #c9a84c; }
+  input::placeholder { color: #333; }
+  select option { background: #1a1a1a; }
+  .btn-register { background: transparent; border: 1px solid #e91e8c; color: #e91e8c; font-family: 'Share Tech Mono', monospace; font-size: 12px; letter-spacing: 2px; padding: 9px 20px; cursor: pointer; white-space: nowrap; transition: background 0.2s, color 0.2s; }
+  .btn-register:hover { background: #e91e8c; color: #0a0a0a; }
+  .table-section { background: #0f0f0f; border: 1px solid #1e1e1e; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th { font-size: 10px; color: #444; letter-spacing: 2px; text-transform: uppercase; padding: 12px 14px; text-align: left; border-bottom: 1px solid #1e1e1e; }
+  tbody tr { border-bottom: 1px solid #161616; transition: background 0.15s; }
+  tbody tr:hover { background: #141414; }
+  tbody td { padding: 11px 14px; color: #bbb; font-size: 12px; }
+  tbody td:first-child { color: #444; }
+  tbody td:nth-child(2) { color: #e0e0d0; font-weight: 500; }
+  .badge { display: inline-block; font-size: 10px; padding: 2px 8px; letter-spacing: 1px; text-transform: uppercase; }
+  .badge-low { background: #0d2b1a; color: #2ecc71; border: 1px solid #1a5c35; }
+  .badge-high { background: #2b0d0d; color: #e74c3c; border: 1px solid #5c1a1a; }
+  .badge-si { background: #1a1a2b; color: #7b8ce8; border: 1px solid #3a4b9c; }
+  .badge-no { background: #1e1e1e; color: #444; border: 1px solid #2a2a2a; }
+  .amount { color: #c9a84c; }
+  .delete-btn { background: none; border: none; color: #333; cursor: pointer; font-size: 16px; padding: 2px 6px; transition: color 0.2s; }
+  .delete-btn:hover { color: #e74c3c; }
+  .bottom-bar { margin-top: 1px; background: #0f0f0f; border: 1px solid #1e1e1e; border-top: none; padding: 14px 16px; display: flex; align-items: center; gap: 24px; }
+  .commission-label { font-size: 10px; color: #444; letter-spacing: 2px; text-transform: uppercase; }
+  .commission-value { font-family: 'Orbitron', monospace; font-size: 16px; color: #c9a84c; }
+  .revenue-label { font-size: 10px; color: #444; letter-spacing: 2px; text-transform: uppercase; }
+  .revenue-value { font-family: 'Orbitron', monospace; font-size: 16px; color: #2ecc71; }
+  .sync-msg { font-size: 10px; letter-spacing: 1px; margin-left: auto; display: none; }
+  .sync-ok { color: #2ecc71; }
+  .sync-err { color: #e74c3c; }
+  .empty-row td { text-align: center; color: #333; padding: 30px; letter-spacing: 2px; }
+  .loading-row td { text-align: center; color: #555; padding: 30px; letter-spacing: 2px; animation: blink 1.2s infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-sub">Francisco Marquez — Club de la Elegancia</div>
+  <div class="header-title">Sales Tracker</div>
+  <div class="header-date">Lanzamiento · <span id="today-date"></span></div>
+  <div class="status-label"><span class="status-dot"></span><span id="status-txt">CONECTANDO...</span></div>
+</div>
+
+<div class="metrics-grid">
+  <div class="metric-card">
+    <div class="metric-label">Total ventas</div>
+    <div class="metric-value" id="m-total">—</div>
+  </div>
+  <div class="metric-card low">
+    <div class="metric-label">Membresías 9€</div>
+    <div class="metric-value" id="m-low">—</div>
+  </div>
+  <div class="metric-card high">
+    <div class="metric-label">High ticket</div>
+    <div class="metric-value" id="m-high">—</div>
+  </div>
+  <div class="metric-card sched">
+    <div class="metric-label">Agendados</div>
+    <div class="metric-value" id="m-sched">—</div>
+  </div>
+</div>
+
+<div class="form-section">
+  <div class="form-title">>> Registrar venta</div>
+  <div class="form-row">
+    <div class="field-group">
+      <div class="field-label">Nombre <span>*</span></div>
+      <input type="text" id="f-nombre" placeholder="María López">
+    </div>
+    <div class="field-group">
+      <div class="field-label">Teléfono</div>
+      <input type="text" id="f-telefono" placeholder="+34 600 000 000">
+    </div>
+    <div class="field-group">
+      <div class="field-label">Correo</div>
+      <input type="text" id="f-correo" placeholder="email@ejemplo.com">
+    </div>
+    <div class="field-group">
+      <div class="field-label">Tipo <span>*</span></div>
+      <select id="f-tipo">
+        <option value="">— Seleccionar —</option>
+        <option value="LOW">Membresía 9€</option>
+        <option value="HIGH">High Ticket</option>
+      </select>
+    </div>
+    <div class="field-group">
+      <div class="field-label">Monto (€)</div>
+      <input type="text" id="f-monto" placeholder="9">
+    </div>
+    <div class="field-group">
+      <div class="field-label">¿Agendado closer?</div>
+      <select id="f-agendado">
+        <option value="No">No</option>
+        <option value="Sí">Sí</option>
+      </select>
+    </div>
+  </div>
+  <div class="form-row-2">
+    <div class="field-group">
+      <div class="field-label">Fecha sesión closer</div>
+      <input type="datetime-local" id="f-sesion">
+    </div>
+    <button class="btn-register" id="btn-reg" onclick="registrar()">[ + REGISTRAR ]</button>
+  </div>
+</div>
+
+<div class="table-section">
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Nombre</th>
+        <th>Teléfono</th>
+        <th>Correo</th>
+        <th>Tipo</th>
+        <th>Monto</th>
+        <th>Fecha</th>
+        <th>Agendado</th>
+        <th>Sesión closer</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody id="tabla-body">
+      <tr class="loading-row"><td colspan="10">— CARGANDO DATOS... —</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="bottom-bar">
+  <div class="revenue-label">Ingresos totales</div>
+  <div class="revenue-value" id="ingresos">0.00 €</div>
+  <div class="commission-label">Tu comisión (10%)</div>
+  <div class="commission-value" id="comision">0.00 €</div>
+  <div class="sync-msg" id="sync-msg"></div>
+</div>
+
+<script>
+const SHEET_URL = 'https://script.google.com/macros/s/AKfycbywuaPtHML65gqAaf-6_o69_nPNeA6QzEC1lmGVE_0GIvVFJKjlFZphw2oOIsjhXl2Y/exec';
+
+let ventas = [];
+
+document.getElementById('today-date').textContent = new Date().toLocaleDateString('es-ES', {day:'2-digit', month:'short', year:'numeric'}).toUpperCase();
+
+function cargarDatos() {
+  const cb = 'cb_' + Date.now();
+  window[cb] = function(res) {
+    delete window[cb];
+    document.getElementById('status-txt').textContent = 'EN VIVO';
+    if (res.ok && res.data) {
+      ventas = res.data;
+      renderTabla();
+    } else {
+      renderTabla();
+    }
+  };
+  const script = document.createElement('script');
+  script.src = SHEET_URL + '?callback=' + cb;
+  script.onerror = function() {
+    document.getElementById('status-txt').textContent = 'SIN CONEXIÓN';
+    ventas = [];
+    renderTabla();
+  };
+  document.body.appendChild(script);
+}
+
+async function registrar() {
+  const nombre = document.getElementById('f-nombre').value.trim();
+  const tipo = document.getElementById('f-tipo').value;
+  if (!nombre || !tipo) { showSync('Nombre y Tipo son obligatorios.', false); return; }
+
+  const btn = document.getElementById('btn-reg');
+  btn.textContent = '[ ENVIANDO... ]';
+  btn.disabled = true;
+
+  const venta = {
+    action: 'add',
+    id: Date.now(),
+    nombre,
+    telefono: document.getElementById('f-telefono').value.trim(),
+    correo: document.getElementById('f-correo').value.trim(),
+    tipo,
+    monto: document.getElementById('f-monto').value.trim() || (tipo === 'LOW' ? '9' : ''),
+    fecha: new Date().toISOString().split('T')[0],
+    agendado: document.getElementById('f-agendado').value,
+    sesion: document.getElementById('f-sesion').value
+  };
+
+  try {
+    await fetch(SHEET_URL, { method: 'POST', body: JSON.stringify(venta) });
+    ventas.push(venta);
+    renderTabla();
+    resetForm();
+    showSync('Guardado en Google Sheets', true);
+  } catch(err) {
+    showSync('Error al guardar. Intenta de nuevo.', false);
+  }
+
+  btn.textContent = '[ + REGISTRAR ]';
+  btn.disabled = false;
+}
+
+async function eliminar(id) {
+  if (!confirm('¿Eliminar este registro?')) return;
+  try {
+    await fetch(SHEET_URL, { method: 'POST', body: JSON.stringify({ action: 'delete', id: String(id) }) });
+    ventas = ventas.filter(v => String(v.id) !== String(id));
+    renderTabla();
+    showSync('Registro eliminado', true);
+  } catch(err) {
+    showSync('Error al eliminar.', false);
+  }
+}
+
+function renderTabla() {
+  const tbody = document.getElementById('tabla-body');
+  if (ventas.length === 0) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="10">— SIN REGISTROS AÚN —</td></tr>';
+    actualizarMetricas();
+    return;
+  }
+  tbody.innerHTML = ventas.map((v, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td>${v.nombre}</td>
+      <td style="color:#666">${v.telefono || '—'}</td>
+      <td style="color:#666">${v.correo || '—'}</td>
+      <td><span class="badge badge-${(v.tipo||'low').toLowerCase()}">${v.tipo || '—'}</span></td>
+      <td class="amount">${v.monto ? v.monto + ' €' : '—'}</td>
+      <td style="color:#555">${v.fecha || '—'}</td>
+      <td><span class="badge ${v.agendado === 'Sí' ? 'badge-si' : 'badge-no'}">${v.agendado || 'No'}</span></td>
+      <td style="color:#555">${v.sesion ? String(v.sesion).replace('T',' ') : '—'}</td>
+      <td><button class="delete-btn" onclick="eliminar('${v.id}')">×</button></td>
+    </tr>
+  `).join('');
+  actualizarMetricas();
+}
+
+function actualizarMetricas() {
+  document.getElementById('m-total').textContent = ventas.length;
+  document.getElementById('m-low').textContent = ventas.filter(v => v.tipo === 'LOW').length;
+  document.getElementById('m-high').textContent = ventas.filter(v => v.tipo === 'HIGH').length;
+  document.getElementById('m-sched').textContent = ventas.filter(v => v.agendado === 'Sí').length;
+  const total = ventas.reduce((acc, v) => acc + (parseFloat(v.monto) || 0), 0);
+  document.getElementById('ingresos').textContent = total.toFixed(2) + ' €';
+  document.getElementById('comision').textContent = (total * 0.10).toFixed(2) + ' €';
+}
+
+function resetForm() {
+  ['f-nombre','f-telefono','f-correo','f-monto','f-sesion'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('f-tipo').value = '';
+  document.getElementById('f-agendado').value = 'No';
+}
+
+function showSync(msg, ok) {
+  const el = document.getElementById('sync-msg');
+  el.textContent = msg;
+  el.className = 'sync-msg ' + (ok ? 'sync-ok' : 'sync-err');
+  el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 3000);
+}
+
+cargarDatos();
+</script>
+</body>
+</html>
