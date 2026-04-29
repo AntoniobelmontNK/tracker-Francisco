@@ -18,12 +18,12 @@
   .metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
   .metric-card { background: #111; border: 1px solid #222; border-top: 2px solid #c9a84c; padding: 16px; }
   .metric-card.low { border-top-color: #2ecc71; }
-  .metric-card.high { border-top-color: #e74c3c; }
+  .metric-card.high { border-top-color: #c9a84c; }
   .metric-card.sched { border-top-color: #e91e8c; }
   .metric-label { font-size: 10px; color: #555; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px; }
   .metric-value { font-family: 'Orbitron', monospace; font-size: 32px; font-weight: 700; color: #e0e0d0; line-height: 1; }
   .metric-card.low .metric-value { color: #2ecc71; }
-  .metric-card.high .metric-value { color: #e74c3c; }
+  .metric-card.high .metric-value { color: #c9a84c; }
   .metric-card.sched .metric-value { color: #e91e8c; }
   .form-section { background: #0f0f0f; border: 1px solid #1e1e1e; border-left: 3px solid #e91e8c; padding: 20px; margin-bottom: 24px; }
   .form-title { font-size: 11px; color: #e91e8c; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 16px; }
@@ -49,7 +49,7 @@
   tbody td:nth-child(2) { color: #e0e0d0; font-weight: 500; }
   .badge { display: inline-block; font-size: 10px; padding: 2px 8px; letter-spacing: 1px; text-transform: uppercase; }
   .badge-low { background: #0d2b1a; color: #2ecc71; border: 1px solid #1a5c35; }
-  .badge-high { background: #2b0d0d; color: #e74c3c; border: 1px solid #5c1a1a; }
+  .badge-anual { background: #1a1a2b; color: #c9a84c; border: 1px solid #3d3010; }
   .badge-si { background: #1a1a2b; color: #7b8ce8; border: 1px solid #3a4b9c; }
   .badge-no { background: #1e1e1e; color: #444; border: 1px solid #2a2a2a; }
   .amount { color: #c9a84c; }
@@ -87,7 +87,7 @@
     <div class="metric-value" id="m-low">—</div>
   </div>
   <div class="metric-card high">
-    <div class="metric-label">High ticket</div>
+    <div class="metric-label">Anuales</div>
     <div class="metric-value" id="m-high">—</div>
   </div>
   <div class="metric-card sched">
@@ -116,7 +116,7 @@
       <select id="f-tipo">
         <option value="">— Seleccionar —</option>
         <option value="LOW">Membresía 9€</option>
-        <option value="HIGH">High Ticket</option>
+        <option value="ANUAL">Anual 99€</option>
       </select>
     </div>
     <div class="field-group">
@@ -268,7 +268,7 @@ function renderTabla() {
       <td>${v.nombre}</td>
       <td style="color:#666">${v.telefono || '—'}</td>
       <td style="color:#666">${v.correo || '—'}</td>
-      <td><span class="badge badge-${(v.tipo||'low').toLowerCase()}">${v.tipo || '—'}</span></td>
+      <td><span class="badge v.tipo === 'ANUAL' ? 'badge-anual' : 'badge-low'">${v.tipo || '—'}</span></td>
       <td class="amount">${v.monto ? v.monto + ' €' : '—'}</td>
       <td style="color:#555">${v.fecha || '—'}</td>
       <td><span class="badge ${v.agendado === 'Sí' ? 'badge-si' : 'badge-no'}">${v.agendado || 'No'}</span></td>
@@ -282,11 +282,11 @@ function renderTabla() {
 function actualizarMetricas() {
   document.getElementById('m-total').textContent = ventas.length;
   document.getElementById('m-low').textContent = ventas.filter(v => v.tipo === 'LOW').length;
-  document.getElementById('m-high').textContent = ventas.filter(v => v.tipo === 'HIGH').length;
+  document.getElementById('m-high').textContent = ventas.filter(v => v.tipo === "ANUAL").length;
   document.getElementById('m-sched').textContent = ventas.filter(v => v.agendado === 'Sí').length;
   const total = ventas.reduce((acc, v) => acc + (parseFloat(v.monto) || 0), 0);
   document.getElementById('ingresos').textContent = total.toFixed(2) + ' €';
-  document.getElementById('comision').textContent = (total * 0.10).toFixed(2) + ' €';
+  const comision = ventas.reduce((acc, v) => { if (v.tipo === 'LOW') return acc + 2; return acc; }, 0); document.getElementById('comision').textContent = '$' + comision.toFixed(2);
 }
 
 function resetForm() {
